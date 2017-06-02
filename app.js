@@ -469,7 +469,7 @@ else if (command === 'invoke') {
         moveValue = argv.moveValue;
     }
     for (var i=0; i < numInvokes; i++){
-        tests.invoke_transaction(argv.channel, argv.chaincodeId, argv.chaincodeVersion, moveValue, argv.peerId, argv.ordererId);
+        tests.invoke_transaction(argv.channel, argv.chaincodeId, argv.chaincodeVersion, moveValue, argv.peerId, argv.ordererId, false);
     }
 }
 

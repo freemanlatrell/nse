@@ -29,7 +29,7 @@ var grpc = require('grpc');
 var fs = require('fs');
 var sleep = require('sleep');
 
-var hfc = require('fabric-client');
+var Client = require('fabric-client');
 var utils = require('fabric-client/lib/utils.js');
 var Peer = require('fabric-client/lib/Peer.js');
 var Orderer = require('fabric-client/lib/Orderer.js');
@@ -39,8 +39,8 @@ var _commonProto = grpc.load(path.join(__dirname, './fabric-sdk/fabric-client/li
 var e2eUtils = require('./fabric-sdk/test/integration/e2e/e2eUtils.js');
 
 
-hfc.addConfigFile(path.join(__dirname, './ServiceCredentials.json'));
-var ORGS = hfc.getConfigSetting();
+Client.addConfigFile(path.join(__dirname, './ServiceCredentials.json'));
+var ORGS = Client.getConfigSetting();
 
 var tx_id = null;
 var nonce = null;
@@ -74,9 +74,9 @@ module.exports.install_chaincode = function (chaincodeId, chaincodeVersion, peer
     ;
 
     function installChaincode(t, chaincodeId, chaincodeVersion, peerId, ordererId) {
-        hfc.setConfigSetting('request-timeout', 60000);
-        var client = new hfc();
-        var chain = client.newChain('mychannel');
+        Client.setConfigSetting('request-timeout', 60000);
+        var client = new Client();
+        var channel = client.newChannel('mychannel');
 
         // Get Org Name
         var mspid;
@@ -104,8 +104,8 @@ module.exports.install_chaincode = function (chaincodeId, chaincodeVersion, peer
                 ordererUrl = ORGS.orderers[i].api_url;
             }
         }
-        chain.addOrderer(
-            new Orderer(
+        channel.addOrderer(
+            client.newOrderer(
                 ordererUrl,
                 {
                     'pem': caroots,
@@ -127,11 +127,11 @@ module.exports.install_chaincode = function (chaincodeId, chaincodeVersion, peer
                         'ssl-target-name-override': peerId
                     });
                 targets.push(peer);
-                chain.addPeer(peer);
+                channel.addPeer(peer);
             }
         }
 
-        return hfc.newDefaultKeyValueStore({
+        return Client.newDefaultKeyValueStore({
             path: testUtil.storePathForOrg(orgName)
         }).then(function (store) {
             client.setStateStore(store);
@@ -140,8 +140,6 @@ module.exports.install_chaincode = function (chaincodeId, chaincodeVersion, peer
                 t.pass('Successfully enrolled user \'admin\'');
                 the_user = admin;
 
-                nonce = utils.getNonce();
-                tx_id = hfc.buildTransactionID(nonce, the_user);
 
             var request = {};
             if (example_cc1){
@@ -149,9 +147,7 @@ module.exports.install_chaincode = function (chaincodeId, chaincodeVersion, peer
                     targets: targets,
                     chaincodePath: testUtil.CHAINCODE_UPGRADE_PATH,
                     chaincodeId: chaincodeId,
-                    chaincodeVersion: chaincodeVersion,
-                    txId: tx_id,
-                    nonce: nonce
+                    chaincodeVersion: chaincodeVersion
                 };
             }
             else {
@@ -159,9 +155,7 @@ module.exports.install_chaincode = function (chaincodeId, chaincodeVersion, peer
                     targets: targets,
                     chaincodePath: testUtil.CHAINCODE_PATH,
                     chaincodeId: chaincodeId,
-                    chaincodeVersion: chaincodeVersion,
-                    txId: tx_id,
-                    nonce: nonce
+                    chaincodeVersion: chaincodeVersion
                 };
             }
 
@@ -196,7 +190,7 @@ module.exports.install_chaincode = function (chaincodeId, chaincodeVersion, peer
                 t.fail('Failed to send install proposal due to error: ' + err.stack ? err.stack : err);
                 throw new Error('Failed to send install proposal due to error: ' + err.stack ? err.stack : err);
             }
-        )
+        );
     }
 }
 // =====================================================================================================================
@@ -226,9 +220,9 @@ module.exports.install_marbles_chaincode = function (chaincodeId, chaincodeVersi
     ;
 
     function installChaincode(t, chaincodeId, chaincodeVersion, peerId, ordererId) {
-        hfc.setConfigSetting('request-timeout', 60000);
-        var client = new hfc();
-        var chain = client.newChain('mychannel');
+        Client.setConfigSetting('request-timeout', 60000);
+        var client = new Client();
+        var chain = client.newChannel('mychannel');
 
         // Get Org Name
         var mspid;
@@ -256,8 +250,8 @@ module.exports.install_marbles_chaincode = function (chaincodeId, chaincodeVersi
                 ordererUrl = ORGS.orderers[i].api_url;
             }
         }
-        chain.addOrderer(
-            new Orderer(
+        channel.addOrderer(
+            client.newOrderer(
                 ordererUrl,
                 {
                     'pem': caroots,
@@ -279,11 +273,11 @@ module.exports.install_marbles_chaincode = function (chaincodeId, chaincodeVersi
                         'ssl-target-name-override': peerId
                     });
                 targets.push(peer);
-                chain.addPeer(peer);
+                channel.addPeer(peer);
             }
         }
 
-        return hfc.newDefaultKeyValueStore({
+        return Client.newDefaultKeyValueStore({
             path: testUtil.storePathForOrg(orgName)
         }).then(function (store) {
             client.setStateStore(store);
@@ -292,17 +286,12 @@ module.exports.install_marbles_chaincode = function (chaincodeId, chaincodeVersi
                 t.pass('Successfully enrolled user \'admin\'');
                 the_user = admin;
 
-                nonce = utils.getNonce();
-                tx_id = hfc.buildTransactionID(nonce, the_user);
-
                 // send proposal to endorser
                 var request = {
                     targets: targets,
                     chaincodePath: testUtil.CHAINCODE_MARBLES_PATH,
                     chaincodeId: chaincodeId,
-                    chaincodeVersion: chaincodeVersion,
-                    txId: tx_id,
-                    nonce: nonce
+                    chaincodeVersion: chaincodeVersion
                 };
 
                 return client.installChaincode(request);
@@ -336,7 +325,7 @@ module.exports.install_marbles_chaincode = function (chaincodeId, chaincodeVersi
                 t.fail('Failed to send install proposal due to error: ' + err.stack ? err.stack : err);
                 throw new Error('Failed to send install proposal due to error: ' + err.stack ? err.stack : err);
             }
-        )
+        );
     }
 }
 
@@ -346,8 +335,8 @@ module.exports.install_marbles_chaincode = function (chaincodeId, chaincodeVersi
 // =====================================================================================================================
 module.exports.instantiate_chaincode = function (channel, chaincodeId, chaincodeVersion, aVal, bVal, peerId, ordererId, endorsers, upgrade) {
     var logger = utils.getLogger('instantiate-chaincode');
-    hfc.setConfigSetting('request-timeout', 60000);
-    var channel_name = hfc.getConfigSetting('CHANNEL_NAME', channel);
+    Client.setConfigSetting('request-timeout', 60000);
+    var channel_name = Client.getConfigSetting('CHANNEL_NAME', channel);
 
     test('\n\n***** instantiate chaincode *****', function(t) {
 
@@ -370,8 +359,8 @@ module.exports.instantiate_chaincode = function (channel, chaincodeId, chaincode
             };
         })(t, eventhubs, t.end);
 
-        var client = new hfc();
-        var chain = client.newChain(channel_name);
+        var client = new Client();
+        var channel = client.newChannel(channel_name);
 
         // Get Org Name
         var mspid;
@@ -402,7 +391,7 @@ module.exports.instantiate_chaincode = function (channel, chaincodeId, chaincode
         let data = fs.readFileSync(path.join(__dirname, caRootsPath));
         let caroots = Buffer.from(data).toString();
 
-        chain.addOrderer(
+        channel.addOrderer(
             client.newOrderer(
                 ordererUrl,
                 {
@@ -416,7 +405,7 @@ module.exports.instantiate_chaincode = function (channel, chaincodeId, chaincode
         var badTransientMap = {'test1': 'transientValue'}; // have a different key than what the chaincode example_cc1.go expects in Init()
         var transientMap = {'test': 'transientValue'};
 
-        return hfc.newDefaultKeyValueStore({
+        return Client.newDefaultKeyValueStore({
             path: testUtil.storePathForOrg(orgName)
         }).then(function (store) {
 
@@ -441,7 +430,7 @@ module.exports.instantiate_chaincode = function (channel, chaincodeId, chaincode
                             'pem': peerCaCert,
                             'ssl-target-name-override': peerId
                         });
-                    chain.addPeer(peer);
+                    channel.addPeer(peer);
                     targets.push(peer);
                     logger.info(' create new eventhub %s', ORGS.peers[i].event_url);
                     let eh = new EventHub(client);
@@ -461,7 +450,7 @@ module.exports.instantiate_chaincode = function (channel, chaincodeId, chaincode
             // read the config block from the orderer for the chain
             // and initialize the verify MSPs based on the participating
             // organizations
-            return chain.initialize();
+            return channel.initialize();
         }, function (err) {
 
             t.fail('Failed to enroll user \'admin\'. ' + err);
@@ -474,9 +463,17 @@ module.exports.instantiate_chaincode = function (channel, chaincodeId, chaincode
                 // first test that a bad transient map would get the chaincode to return an error
                 let request = buildChaincodeProposal(the_user, channel, testUtil.CHAINCODE_PATH, chaincodeId, chaincodeVersion, upgrade, badTransientMap, peerId, aVal, bVal, endorsers);
                 tx_id = request.tx_id;
-                request = request.request;
+                t.comment(util.format(
+                    'Upgrading chaincode "%s" at path "%s" to version "%s" by passing args "%s" to method "%s" in transaction "%s"',
+                    request.chaincodeId,
+                    request.chaincodePath,
+                    request.chaincodeVersion,
+                    request.args,
+                    request.fcn,
+                    request.txId.getTransactionID()
+                ));
 
-                return chain.sendUpgradeProposal(request)
+                return channel.sendUpgradeProposal(request)
                     .then(function (results) {
                         let proposalResponses = results[0];
 
@@ -500,7 +497,7 @@ module.exports.instantiate_chaincode = function (channel, chaincodeId, chaincode
                             tx_id = request.tx_id;
                             request = request.request;
 
-                            return chain.sendUpgradeProposal(request);
+                            return channel.sendUpgradeProposal(request);
                         } else {
                             throw new Error('Failed to test for bad transient map. The chaincode should have rejected the upgrade proposal.');
                         }
@@ -510,12 +507,12 @@ module.exports.instantiate_chaincode = function (channel, chaincodeId, chaincode
                 tx_id = request.tx_id;
                 request = request.request;
 
-                return chain.sendInstantiateProposal(request);
+                return channel.sendInstantiateProposal(request);
             }
 
         }, function (err) {
 
-            t.fail(util.format('Failed to initialize the chain. %s', err.stack ? err.stack : err));
+            t.fail(util.format('Failed to initialize the channel. %s', err.stack ? err.stack : err));
             throw new Error('Failed to initialize the chain');
 
         }).then(function (results) {
@@ -547,7 +544,7 @@ module.exports.instantiate_chaincode = function (channel, chaincodeId, chaincode
                 // set the transaction listener and set a timeout of 30sec
                 // if the transaction did not get committed within the timeout period,
                 // fail the test
-                var deployId = tx_id.toString();
+                var deployId = tx_id.getTransactionID();
 
                 var eventPromises = [];
                 eventhubs.forEach(function (eh) {
@@ -572,7 +569,7 @@ module.exports.instantiate_chaincode = function (channel, chaincodeId, chaincode
                     eventPromises.push(txPromise);
                 });
 
-                var sendPromise = chain.sendTransaction(request);
+                var sendPromise = channel.sendTransaction(request);
                 return Promise.all([sendPromise].concat(eventPromises))
                     .then(function (results) {
 
@@ -617,8 +614,8 @@ module.exports.instantiate_chaincode = function (channel, chaincodeId, chaincode
 // =====================================================================================================================
 module.exports.instantiate_marbles_chaincode = function (channel, chaincodeId, chaincodeVersion, peerId, appName, endorsers, upgrade) {
     var logger = utils.getLogger('instantiate-chaincode');
-    hfc.setConfigSetting('request-timeout', 60000);
-    var channel_name = hfc.getConfigSetting('CHANNEL_NAME', channel);
+    Client.setConfigSetting('request-timeout', 60000);
+    var channel_name = Client.getConfigSetting('CHANNEL_NAME', channel);
 
     test('\n\n***** instantiate marbles chaincode *****', function(t) {
 
@@ -645,8 +642,8 @@ module.exports.instantiate_marbles_chaincode = function (channel, chaincodeId, c
             };
         })(t, eventhubs, t.end);
 
-        var client = new hfc();
-        var chain = client.newChain(channel_name);
+        var client = new Client();
+        var channel = client.newChannel(channel_name);
 
         // Get Org Name
         var peerName, mspid;
@@ -680,7 +677,7 @@ module.exports.instantiate_marbles_chaincode = function (channel, chaincodeId, c
         let data = fs.readFileSync(path.join(__dirname, caRootsPath));
         let caroots = Buffer.from(data).toString();
 
-        chain.addOrderer(
+        channel.addOrderer(
             client.newOrderer(
                 ordererUrl,
                 {
@@ -694,7 +691,7 @@ module.exports.instantiate_marbles_chaincode = function (channel, chaincodeId, c
         var badTransientMap = {'test1': 'transientValue'}; // have a different key than what the chaincode example_cc1.go expects in Init()
         var transientMap = {'test': 'transientValue'};
 
-        return hfc.newDefaultKeyValueStore({
+        return Client.newDefaultKeyValueStore({
             path: testUtil.storePathForOrg(orgName)
         }).then(function (store) {
 
@@ -721,7 +718,7 @@ module.exports.instantiate_marbles_chaincode = function (channel, chaincodeId, c
                             'pem': peerCaCert,
                             'ssl-target-name-override': peerId
                         });
-                    chain.addPeer(peer);
+                    channel.addPeer(peer);
                     targets.push(peer);
                     logger.info(' create new eventhub %s', ORGS.peers[i].event_url);
                     let eh = new EventHub(client);
@@ -741,7 +738,7 @@ module.exports.instantiate_marbles_chaincode = function (channel, chaincodeId, c
             // read the config block from the orderer for the chain
             // and initialize the verify MSPs based on the participating
             // organizations
-            return chain.initialize();
+            return channel.initialize();
         }, function (err) {
 
             t.fail('Failed to enroll user \'admin\'. ' + err);
@@ -756,7 +753,7 @@ module.exports.instantiate_marbles_chaincode = function (channel, chaincodeId, c
                 tx_id = request.tx_id;
                 request = request.request;
 
-                return chain.sendUpgradeProposal(request)
+                return channel.sendUpgradeProposal(request)
                     .then(function (results) {
                         let proposalResponses = results[0];
 
@@ -780,7 +777,7 @@ module.exports.instantiate_marbles_chaincode = function (channel, chaincodeId, c
                             tx_id = request.tx_id;
                             request = request.request;
 
-                            return chain.sendUpgradeProposal(request);
+                            return channel.sendUpgradeProposal(request);
                         } else {
                             throw new Error('Failed to test for bad transient map. The chaincode should have rejected the upgrade proposal.');
                         }
@@ -790,12 +787,12 @@ module.exports.instantiate_marbles_chaincode = function (channel, chaincodeId, c
                 tx_id = request.tx_id;
                 request = request.request;
 
-                return chain.sendInstantiateProposal(request);
+                return channel.sendInstantiateProposal(request);
             }
 
         }, function (err) {
 
-            t.fail(util.format('Failed to initialize the chain. %s', err.stack ? err.stack : err));
+            t.fail(util.format('Failed to initialize the channel. %s', err.stack ? err.stack : err));
             throw new Error('Failed to initialize the chain');
 
         }).then(function (results) {
@@ -827,7 +824,7 @@ module.exports.instantiate_marbles_chaincode = function (channel, chaincodeId, c
                 // set the transaction listener and set a timeout of 30sec
                 // if the transaction did not get committed within the timeout period,
                 // fail the test
-                var deployId = tx_id.toString();
+                var deployId = tx_id.getTransactionID();
 
                 var eventPromises = [];
                 eventhubs.forEach(function (eh) {
@@ -852,7 +849,7 @@ module.exports.instantiate_marbles_chaincode = function (channel, chaincodeId, c
                     eventPromises.push(txPromise);
                 });
 
-                var sendPromise = chain.sendTransaction(request);
+                var sendPromise = channel.sendTransaction(request);
                 return Promise.all([sendPromise].concat(eventPromises))
                     .then(function (results) {
 
@@ -897,12 +894,12 @@ module.exports.instantiate_marbles_chaincode = function (channel, chaincodeId, c
 // 										Invoke Transaction
 // =====================================================================================================================
 
-module.exports.invoke_transaction = function (channel, chaincodeId, chaincodeVersion, value, peerId, ordererId) {
+module.exports.invoke_transaction = function (channel, chaincodeId, chaincodeVersion, value, peerId, ordererId, useStore) {
     var logger = utils.getLogger('invoke-chaincode');
 
     test('\n\n***** invoke transaction to move money *****', function (t) {
-        hfc.setConfigSetting('request-timeout', 60000);
-        var channel_name = hfc.getConfigSetting('CHANNEL_NAME', channel);
+        Client.setConfigSetting('request-timeout', 60000);
+        var channel_name = Client.getConfigSetting('CHANNEL_NAME', channel);
 
         var targets = [],
             eventhubs = [];
@@ -927,8 +924,8 @@ module.exports.invoke_transaction = function (channel, chaincodeId, chaincodeVer
         // submit the request. intentionally we are using a different org
         // than the one that instantiated the chaincode, although either org
         // should work properly
-        var client = new hfc();
-        var chain = client.newChain(channel_name);
+        var client = new Client();
+        var channel = client.newChannel(channel_name);
 
         // Get Org Name
         var mspid;
@@ -939,9 +936,11 @@ module.exports.invoke_transaction = function (channel, chaincodeId, chaincodeVer
         }
 
         var orgName = mspid;
-        var cryptoSuite = client.newCryptoSuite({path: testUtil.storePathForOrg(orgName)});
-       // cryptoSuite.setCryptoKeyStore(client.newCryptoKeyStore({path: testUtil.storePathForOrg(orgName)}));
-        client.setCryptoSuite(cryptoSuite);
+        var cryptoSuite = clien.newcryptoSuite();
+        /*if (userStor) {
+            cryptoSuite.setCryptoKeyStore({path: testUtil.storePathForOrg(orgName)});
+            client.setCryptoSuite(cryptoSuite);
+        }*/
 
         var ordererUrl;
         for (let i in ORGS.orderers) {
@@ -959,7 +958,7 @@ module.exports.invoke_transaction = function (channel, chaincodeId, chaincodeVer
         let data = fs.readFileSync(path.join(__dirname, caRootsPath));
         let caroots = Buffer.from(data).toString();
 
-        chain.addOrderer(
+        channel.addOrderer(
             client.newOrderer(
                 ordererUrl,
                 {
@@ -969,13 +968,19 @@ module.exports.invoke_transaction = function (channel, chaincodeId, chaincodeVer
             )
         );
 
-        return hfc.newDefaultKeyValueStore({
-                path: testUtil.storePathForOrg(orgName)
-            }).then(function(store) {
-
-            client.setStateStore(store);
+        var promise;
+        if (useStore) {
+            promise = Client.newDefaultKeyValueStore({
+                path: testUtil.storePathForOrg(orgname)
+            });
+        }else {
+            promise = Promise.resolve(useStore);
+        }
+        return promise.then(function(store){
+            if (store) {
+                client.setStateStore(store);
+            }
             return testUtil.getSubmitter(client, t, true, peerId, orgName);
-
          }).then(function(admin) {
 
             t.pass('Successfully enrolled user \'admin\'');
@@ -994,8 +999,7 @@ module.exports.invoke_transaction = function (channel, chaincodeId, chaincodeVer
                         'pem': peerCaCert,
                         'ssl-target-name-override': peerId
                     });
-                chain.addPeer(peer);
-                targets.push(peer);
+                channel.addPeer(peer);
                 logger.info(' create new eventhub %s', ORGS.peers[i].event_url);
                 let eh = new EventHub(client);
                 eh.setPeerAddr(
@@ -1011,26 +1015,24 @@ module.exports.invoke_transaction = function (channel, chaincodeId, chaincodeVer
             }
         }
 
-        return chain.initialize();
+        return channel.initialize();
 
     }).then(function(nothing) {
-            nonce = utils.getNonce();
-        tx_id = hfc.buildTransactionID(nonce, the_user);
-        utils.setConfigSetting('E2E_TX_ID', tx_id);
-        logger.info('setConfigSetting("E2E_TX_ID") = %s', tx_id);
-        t.comment(util.format('Sending transaction "%s"', tx_id));
+        tx_id = client.newTransactionID(the_user);
+        utils.setConfigSetting('E2E_TX_ID', tx_id.getTransactionID());
+        logger.info('setConfigSetting("E2E_TX_ID") = %s', tx_id.getTransactionID());
+        t.comment(util.format('Sending transaction "%s"', tx_id.getTransactionID()));
 
         // send proposal to endorser
         var request = {
             chaincodeId : chaincodeId,
-            chaincodeVersion : chaincodeVersion,
-            chainId: channel,
+         //   chaincodeVersion : chaincodeVersion,
+         //   chainId: channel,
             fcn: 'invoke',
             args: ['move', 'a', 'b', value],
-            txId: tx_id,
-            nonce: nonce
+            txId: tx_id
         };
-        return chain.sendTransactionProposal(request);
+        return channel.sendTransactionProposal(request);
 
     }, function(err) {
 
@@ -1062,7 +1064,7 @@ module.exports.invoke_transaction = function (channel, chaincodeId, chaincodeVer
             let proposal_response = proposalResponses[i];
             if( proposal_response.response && proposal_response.response.status === 200) {
                 t.pass('transaction proposal has response status of good');
-                one_good = chain.verifyProposalResponse(proposal_response);
+                one_good = channel.verifyProposalResponse(proposal_response);
                 if(one_good) {
                     t.pass(' transaction proposal signature and endorser are valid');
                 }
@@ -1074,7 +1076,7 @@ module.exports.invoke_transaction = function (channel, chaincodeId, chaincodeVer
         if (all_good) {
             // check all the read/write sets to see if the same, verify that each peer
             // got the same results on the proposal
-            all_good = chain.compareProposalResponseResults(proposalResponses);
+            all_good = channel.compareProposalResponseResults(proposalResponses);
             t.pass('compareProposalResponseResults execution did not throw an error');
             if(all_good){
                 t.pass(' All proposals have a matching read/writes sets');
@@ -1095,7 +1097,7 @@ module.exports.invoke_transaction = function (channel, chaincodeId, chaincodeVer
             // set the transaction listener and set a timeout of 30sec
             // if the transaction did not get committed within the timeout period,
             // fail the test
-            var deployId = tx_id.toString();
+            var deployId = tx_id.getTransactionID();
 
             var eventPromises = [];
             eventhubs.forEach(function(eh) {
@@ -1104,17 +1106,17 @@ module.exports.invoke_transaction = function (channel, chaincodeId, chaincodeVer
 
             eh.registerTxEvent(deployId.toString(),
                 function(tx, code) {
-                clearTimeout(handle);
-            eh.unregisterTxEvent(deployId);
+                    clearTimeout(handle);
+                    eh.unregisterTxEvent(deployId);
 
-            if (code !== 'VALID') {
-                t.fail('The balance transfer transaction was invalid, code = ' + code);
-                reject();
-            } else {
-                t.pass('The balance transfer transaction has been committed on peer '+ eh.ep._endpoint.addr);
-                resolve();
-            }
-        },
+                    if (code !== 'VALID') {
+                        t.fail('The balance transfer transaction was invalid, code = ' + code);
+                        reject();
+                    } else {
+                         t.pass('The balance transfer transaction has been committed on peer '+ eh.ep._endpoint.addr);
+                     resolve();
+                     }
+            },
             function(err) {
                 clearTimeout(handle);
                 t.pass('Successfully received notification of the event call back being cancelled for '+ deployId);
@@ -1126,7 +1128,7 @@ module.exports.invoke_transaction = function (channel, chaincodeId, chaincodeVer
             eventPromises.push(txPromise);
         });
 
-            var sendPromise = chain.sendTransaction(request);
+            var sendPromise = channel.sendTransaction(request);
             return Promise.all([sendPromise].concat(eventPromises))
                     .then(function(results) {
 
@@ -1157,6 +1159,7 @@ module.exports.invoke_transaction = function (channel, chaincodeId, chaincodeVer
             t.comment('To manually run /test/integration/query.js, set the following environment variables:');
             t.comment('export E2E_TX_ID='+'\''+tx_id+'\'');
             t.comment('******************************************************************');
+            logger.debug('invokeChaincode end');
             return true;
         } else {
             t.fail('Failed to order the transaction. Error code: ' + response.status);
@@ -1180,15 +1183,15 @@ module.exports.query = function (channel, chaincodeId, chaincodeVersion, peerId,
 
     test('\n\n***** query chaincode *****', function(t) {
 
-        hfc.setConfigSetting('request-timeout', 60000);
-        var channel_name = hfc.getConfigSetting('CHANNEL_NAME', channel);
+        Client.setConfigSetting('request-timeout', 60000);
+        var channel_name = Client.getConfigSetting('CHANNEL_NAME', channel);
 
         // this is a transaction, will just use org's identity to
         // submit the request. intentionally we are using a different org
         // than the one that submitted the "move" transaction, although either org
         // should work properly
-        var client = new hfc();
-        var chain = client.newChain(channel_name);
+        var client = new Client();
+        var channel = client.newChannel(channel_name);
 
         // Get Org Name
         var mspid;
@@ -1216,12 +1219,12 @@ module.exports.query = function (channel, chaincodeId, chaincodeVersion, peerId,
                         'pem': peerCaCert,
                         'ssl-target-name-override': peerId
                     });
-                chain.addPeer(peer);
+                channel.addPeer(peer);
             }
         }
 
 
-        return hfc.newDefaultKeyValueStore({
+        return Client.newDefaultKeyValueStore({
                 path: testUtil.storePathForOrg(orgName)
             }).then(function(store) {
 
@@ -1230,17 +1233,14 @@ module.exports.query = function (channel, chaincodeId, chaincodeVersion, peerId,
 
     }).then(function(admin) {
             the_user = admin;
-
-        nonce = utils.getNonce();
-        tx_id = hfc.buildTransactionID(nonce, the_user);
+            tx_id = client.newTransactionID(the_user);
 
         // send query
         var request = {
             chaincodeId : chaincodeId,
-            chaincodeVersion : chaincodeVersion,
-            chainId: channel,
+           // chaincodeVersion : chaincodeVersion,
+           // chainId: channel,
             txId: tx_id,
-            nonce: nonce,
             fcn: 'invoke',
             args: ['query','b']
         };
@@ -1250,7 +1250,7 @@ module.exports.query = function (channel, chaincodeId, chaincodeVersion, peerId,
             request.args = ['testTransient', ''];
         }
 
-        return chain.queryByChaincode(request);
+        return channel.queryByChaincode(request);
     },
         function(err) {
             t.comment('Failed to get submitter \'admin\'');
@@ -1271,15 +1271,15 @@ module.exports.query = function (channel, chaincodeId, chaincodeVersion, peerId,
                 return true;
             } else {
                 t.fail('response_payloads is null');
-        throw new Error('Failed to get response on query');
-    }
+                throw new Error('Failed to get response on query');
+        }
     },
         function(err) {
             t.fail('Failed to send query due to error: ' + err.stack ? err.stack : err);
             throw new Error('Failed, got error on query');
         });
     });
-}
+};
 
 // =====================================================================================================================
 // 										Create Channel
@@ -1289,7 +1289,7 @@ module.exports.create_channel = function (channel, peerId, ordererId) {
 
 
     test('\n\n***** Create Channel *****\n\n', function (t) {
-        var client = new hfc();
+        var client = new Client();
 
         var ordererUrl;
         for (let i in ORGS.orderers) {
@@ -1336,7 +1336,7 @@ module.exports.create_channel = function (channel, peerId, ordererId) {
         var ONE_OF_TWO_ORG_MEMBER = {
             identities: TWO_ORG_MEMBERS_AND_ADMIN,
             policy: {
-                '1-of': [{'signed-by': 0}, {'signed-by': 1}]
+                '1-of': [{ 'signed-by': 0 }, { 'signed-by': 1 }]
             }
         };
 
@@ -1347,102 +1347,6 @@ module.exports.create_channel = function (channel, peerId, ordererId) {
             }
         };
 
-        var test_input = {
-            channel: {
-                name: channel,
-                consortium: 'SampleConsortium',
-                settings: {
-                    'batch-size': {'max-message-count': 10, 'absolute-max-bytes': '99m', 'preferred-max-bytes': '512k'},
-                    'batch-timeout': '10s',
-                    'hashing-algorithm': 'SHA256',
-                    'consensus-type': 'solo'
-                },
-                policies: {
-                    Readers: {threshold: 'ANY'},
-                    Writers: {threshold: 'ANY'},
-                    Admins: {threshold: 'ANY'},
-                    AcceptAllPolicy: {signature: ACCEPT_ALL}
-                },
-                orderers: {
-                    organizations: [{
-                        mspid: 'OrdererMSP',
-                        policies: {
-                            Readers: {signature: ACCEPT_ALL},
-                            Writers: {signature: ACCEPT_ALL},
-                            Admins: {signature: ACCEPT_ALL}
-                        },
-                        'end-points': ['orderer0:7050']
-                    }],
-                    policies: {
-                        Readers: {threshold: 'ANY'},
-                        Writers: {threshold: 'ANY'},
-                        Admins: {threshold: 'ANY'},
-                        AcceptAllPolicy: {signature: ACCEPT_ALL},
-                        BlockValidation: {threshold: 'ANY', sub_policy: 'Writers'}
-                    }
-                },
-                peers: {
-                    organizations: [{
-                        id: 'Org1MSP',
-                        'anchor-peers': ['peer0:7051'],
-                        policies: {
-                            Readers: {signature: ACCEPT_ALL},
-                            Writers: {signature: ACCEPT_ALL},
-                            Admins: {signature: ACCEPT_ALL}
-                        }
-                    }, {
-                        mspid: 'Org2MSP',
-                        'anchor-peers': ['peer2:8051'],
-                        policies: {
-                            Readers: {signature: ACCEPT_ALL},
-                            Writers: {signature: ACCEPT_ALL},
-                            Admins: {signature: ACCEPT_ALL}
-                        }
-                    }],
-                    policies: {
-                        Readers: {threshold: 'ANY'},
-                        Writers: {threshold: 'ANY'},
-                        Admins: {threshold: 'ANY'}
-                    },
-                }
-            }
-        };
-        var test_input2 = {
-            channel: {
-                name: channel,
-                consortium: 'SampleConsortium',
-                settings: {
-                    'batch-size': {'max-message-count': 10, 'absolute-max-bytes': '99m', 'preferred-max-bytes': '512k'},
-                    'batch-timeout': '10s',
-                    'hashing-algorithm': 'SHA256',
-                    'consensus-type': 'solo'
-                },
-                orderers: {
-                    organizations: [{
-                        id: 'OrdererMSP',
-                        msp: {mspid: 'OrdererMSP'},
-                    }]
-                },
-                peers: {
-                    organizations: [{
-                        id: 'Org1MSP',
-                        msp: {mspid: 'Org1MSP'},
-                        'anchor-peers': ['peer0:7051'],
-                        policies: {}
-                    }, {
-                        id: 'Org2MSP',
-                        msp: {mspid: 'Org2MSP'},
-                        'anchor-peers': ['peer2:8051'],
-                        policies: {}
-                    }],
-                    policies: {
-                        Admins: {threshold: 'ANY'},
-                        Writers: {threshold: 'ANY'},
-                        Readers: {threshold: 'ANY'},
-                    },
-                }
-            }
-        };
 
         //Get MSPID
         var mspid;
@@ -1451,23 +1355,7 @@ module.exports.create_channel = function (channel, peerId, ordererId) {
                 mspid = ORGS.peers[key].msp_id;
             }
         }
-        var test_input3 = {
-            channel: {
-                name: channel,
-                consortium: 'SampleConsortium',
-                peers: {
-                    organizations: [{
-                        id: mspid,
-                        policies: {}
-                    }],
-                    policies: {
-                        Admins: {threshold: 'MAJORITY'},
-                        Writers: {threshold: 'ANY'},
-                        Readers: {threshold: 'ANY'},
-                    },
-                }
-            }
-        };
+
         var config = null;
         var signatures = [];
         var msps = [];
@@ -1482,7 +1370,7 @@ module.exports.create_channel = function (channel, peerId, ordererId) {
 
         utils.setConfigSetting('key-value-store', 'fabric-client/lib/impl/FileKeyValueStore.js');
 
-        return hfc.newDefaultKeyValueStore({
+        return Client.newDefaultKeyValueStore({
             path: testUtil.storePathForOrg(orgName)
         }).then(function (store) {
             client.setStateStore(store);
@@ -1492,31 +1380,10 @@ module.exports.create_channel = function (channel, peerId, ordererId) {
 
             return testUtil.getOrderAdminSubmitter(client, t);
         }).then(function (admin) {
-            t.pass('Successfully enrolled user \'admin\' for orderer');
-
-            // use this when the config comes from the configtx tool
-//		data = fs.readFileSync(path.join(__dirname, '../../fixtures/channel/mychannel.tx'));
-//		var envelope = _commonProto.Envelope.decode(data);
-//		var payload = _commonProto.Payload.decode(envelope.getPayload().toBuffer());
-//		var configtx = _configtxProto.ConfigUpdateEnvelope.decode(payload.getData().toBuffer());
-//		config = configtx.getConfigUpdate().toBuffer();
-//
-//		logger.debug('\n***\n dump the configtx config \n***\n');
-//		var chain = client.newChain('test');
-//		chain.loadConfigUpdate(config);
-
-            //have the SDK build the config update object
-            // ------ this is not a supported API ...for test only
-            return client.buildChannelConfig(test_input3, orderer, msps);
-        }).then(function (config_bytes) {
-            logger.debug('\n***\n built config \n***\n');
-            t.pass('Successfully built config update');
-            // comment the following line out when using the configtx config above
-            config = config_bytes;
-
-//		logger.debug('\n***\n dump the SDK config \n***\n');
-//		var chain = client.newChain('testsdk');
-//		chain.loadConfigUpdate(config_bytes);
+            // use the config update created by the configtx tool
+            let envelope_bytes = fs.readFileSync(path.join(__dirname, './fabric-sdk/test/fixtures/channel/mychannel.tx'));
+            config = client.extractChannelConfig(envelope_bytes);
+            t.pass('Successfull extracted the config update from the configtx envelope');
 
             client._userContext = null;
             return testUtil.getSubmitter(client, t, true, peerId, orgName);
@@ -1555,15 +1422,13 @@ module.exports.create_channel = function (channel, peerId, ordererId) {
             logger.debug('\n***\n done signing \n***\n');
 
             // build up the create request
-            let nonce = utils.getNonce();
-            let tx_id = hfc.buildTransactionID(nonce, the_user);
+            let tx_id = client.newTransactionID(the_user);
             var request = {
                 config: config,
                 signatures: signatures,
                 name: channel,
                 orderer: orderer,
-                txId: tx_id,
-                nonce: nonce
+                txId: tx_id
             };
 
             // send to create request to orderer
@@ -1638,15 +1503,15 @@ module.exports.join_channel = function (channel, peerId, ordererId) {
             });
     });
 
-    function joinChannel(channel, ordererId, t) {
+    function joinChannel(channel_, ordererId, t) {
         t.comment(util.format('Calling peers in organization "%s" to join the channel', mspid));
 
-        var channel_name = hfc.getConfigSetting('CHANNEL_NAME', channel);
+        var channel_name = Client.getConfigSetting('CHANNEL_NAME', channel_);
         //
         // Create and configure the test chain
         //
-        var client = new hfc();
-        var chain = client.newChain(channel_name);
+        var client = new Client();
+        var channel = client.newChannel(channel_name);
 
         var orgName = mspid;
 
@@ -1670,7 +1535,7 @@ module.exports.join_channel = function (channel, peerId, ordererId) {
         let caroots = Buffer.from(data).toString();
         var genesis_block = null;
 
-        chain.addOrderer(
+        channel.addOrderer(
             client.newOrderer(
                 ordererUrl,
                 {
@@ -1680,7 +1545,7 @@ module.exports.join_channel = function (channel, peerId, ordererId) {
             )
         );
 
-        return hfc.newDefaultKeyValueStore({
+        return Client.newDefaultKeyValueStore({
             path: testUtil.storePathForOrg(orgName)
         }).then(function (store) {
             client.setStateStore(store);
@@ -1688,14 +1553,12 @@ module.exports.join_channel = function (channel, peerId, ordererId) {
             return testUtil.getOrderAdminSubmitter(client, t);
         }).then(function (admin) {
             t.pass('Successfully enrolled orderer \'admin\'');
-            nonce = utils.getNonce();
-            tx_id = hfc.buildTransactionID(nonce, admin);
+            tx_id = client.newTransactionID();
             let request = {
-                txId: tx_id,
-                nonce: nonce
+                txId: tx_id
             };
 
-            return chain.getGenesisBlock(request);
+            return channel.getGenesisBlock(request);
         }).then(function (block) {
             t.pass('Successfully got the genesis block');
             genesis_block = block;
@@ -1721,7 +1584,7 @@ module.exports.join_channel = function (channel, peerId, ordererId) {
                             'pem': peerCaCert,
                             'ssl-target-name-override': peerId
                         });
-                    chain.addPeer(peer);
+                    channel.addPeer(peer);
                     targets.push(peer);
                     logger.info(' create new eventhub %s', ORGS.peers[i].event_url);
                     let eh = new EventHub(client);
@@ -1765,15 +1628,13 @@ module.exports.join_channel = function (channel, peerId, ordererId) {
 
                 eventPromises.push(txPromise);
             });
-            nonce = utils.getNonce();
-            tx_id = hfc.buildTransactionID(nonce, the_user);
+            tx_id = client.newTransactionID();
             let request = {
                 targets: targets,
                 block: genesis_block,
-                txId: tx_id,
-                nonce: nonce
+                txId: tx_id
             };
-            let sendPromise = chain.joinChannel(request);
+            let sendPromise = channel.joinChannel(request);
             return Promise.all([sendPromise].concat(eventPromises));
         }, function (err) {
             t.fail('Failed to enroll user \'admin\' due to error: ' + err.stack ? err.stack : err);
@@ -1959,8 +1820,7 @@ module.exports.delete_marbles = function(name, color, size, cb) {
 
 
 function buildChaincodeProposal(the_user, channel, chaincode_path, chaincodeId, version, upgrade, transientMap, peerId,  aVal, bVal, endorsers) {
-    let nonce = utils.getNonce();
-    let tx_id = hfc.buildTransactionID(nonce, the_user);
+    let tx_id = client.newTransactionID(the_user);
 
     var mspid;
     for (let key in ORGS.peers) {
@@ -1977,8 +1837,7 @@ function buildChaincodeProposal(the_user, channel, chaincode_path, chaincodeId, 
         chaincodeVersion: version,
         fcn: 'init',
         args: ['a', aVal, 'b', bVal],
-        txId: tx_id,
-        nonce: nonce
+        txId: tx_id
     };
     var endorsement_policy = build_endorsement_policy(endorsers);
     request['endorsement-policy'] = endorsement_policy;
@@ -1989,12 +1848,11 @@ function buildChaincodeProposal(the_user, channel, chaincode_path, chaincodeId, 
         request.transientMap = transientMap;
     }
 
-    return { request: request, tx_id: tx_id };
+    return request;
 }
 
 function buildMarblesChaincodeProposal(the_user, channel, chaincode_path, chaincodeId, version, upgrade, transientMap, peerId, endorsers) {
-    let nonce = utils.getNonce();
-    let tx_id = hfc.buildTransactionID(nonce, the_user);
+    let tx_id = client.newTransactionID(the_user);
 
     var mspid;
     for (let key in ORGS.peers) {
@@ -2011,8 +1869,7 @@ function buildMarblesChaincodeProposal(the_user, channel, chaincode_path, chainc
         chaincodeVersion: version,
         fcn: 'init',
         args: ['314'],
-        txId: tx_id,
-        nonce: nonce
+        txId: tx_id
     };
 
     var endorsement_policy = build_endorsement_policy(endorsers);
@@ -2023,7 +1880,7 @@ function buildMarblesChaincodeProposal(the_user, channel, chaincode_path, chainc
         request.transientMap = transientMap;
     }
 
-    return { request: request, tx_id: tx_id };
+    return request;
 }
 
 function createBlockchainCredsFile(logger, peerId) {

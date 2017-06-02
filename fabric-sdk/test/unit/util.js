@@ -114,7 +114,7 @@ var	tlsOptions = {
 };
 
 function getMember(username, password, client, t, peerId, mspid, orgName, caId) {
-    var caName, caUrl;
+    var caUrl;
     for (let key in ORGS.cas){
         if (ORGS.cas[key].name === caId){
             caUrl = ORGS.cas[key].api_url;
